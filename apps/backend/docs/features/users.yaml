@@ -1,0 +1,246 @@
+# Users Feature
+
+paths:
+  /api/users:
+    get:
+      tags: [Usuarios]
+      summary: Listar todos los usuarios
+      description: Obtiene todos los usuarios del sistema. Solo accesible para administradores y gestión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: role
+          schema:
+            type: string
+          description: "Filtrar por nombre de rol (ej: admin, gestion, planificador)"
+        - in: query
+          name: companyId
+          schema:
+            type: string
+          description: "Filtrar por ID de empresa"
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+          description: Filtrar por estado activo (true/false)
+      responses:
+        '200':
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    email:
+                      type: string
+                      format: email
+                    firstName:
+                      type: string
+                    lastName:
+                      type: string
+                    isActive:
+                      type: boolean
+                    emailVerified:
+                      type: boolean
+                    createdAt:
+                      type: string
+                      format: date-time
+                    updatedAt:
+                      type: string
+                      format: date-time
+                    role:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                    company:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                    _count:
+                      type: object
+                      properties:
+                        managedProjects:
+                          type: integer
+        '401':
+          description: No autenticado
+        '403':
+          description: No autorizado (solo admin/gestión)
+
+  /api/users/role/{role}:
+    get:
+      tags: [Usuarios]
+      summary: Obtener usuarios por rol
+      description: Obtiene todos los usuarios de un rol específico. Solo accesible para administradores y gestión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: role
+          required: true
+          schema:
+            type: string
+          description: "Nombre del rol (ej: admin, gestion, planificador)"
+      responses:
+        '200':
+          description: Lista de usuarios del rol
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: No autenticado
+        '403':
+          description: No autorizado (solo admin/gestión)
+
+  /api/users/{id}:
+    get:
+      tags: [Usuarios]
+      summary: Obtener usuario por ID
+      description: Obtiene un usuario específico. Solo accesible para administradores y gestión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: No autenticado
+        '403':
+          description: No autorizado
+        '404':
+          description: Usuario no encontrado
+
+    put:
+      tags: [Usuarios]
+      summary: Actualizar usuario
+      description: Actualiza un usuario existente. Solo accesible para administradores y gestión.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                roleId:
+                  type: string
+                  format: uuid
+                companyId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                isActive:
+                  type: boolean
+      responses:
+        '200':
+          description: Usuario actualizado
+        '400':
+          description: Error de validación
+        '403':
+          description: No autorizado
+        '404':
+          description: Usuario no encontrado
+
+    delete:
+      tags: [Usuarios]
+      summary: Eliminar usuario
+      description: Elimina un usuario existente. Solo accesible para administradores.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario
+      responses:
+        '200':
+          description: Usuario eliminado
+        '403':
+          description: No autorizado
+        '404':
+          description: Usuario no encontrado
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        isActive:
+          type: boolean
+        emailVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        role:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        company:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string

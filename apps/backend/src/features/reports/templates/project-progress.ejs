@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ficha Oficial de Avance Físico</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 20mm 15mm 20mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #111416;
+      background: #ffffff;
+      font-size: 9pt;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .report-container {
+      width: 100%;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    /* ── HEADER ────────────────────────────────────────────────────────── */
+    .header {
+      border-bottom: 1px solid #d8d0c4;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .header-table td {
+      vertical-align: top;
+    }
+    .header-title {
+      font-size: 20pt;
+      font-weight: 700;
+      color: #111416;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+    }
+    .header-subtitle {
+      font-size: 8.5pt;
+      color: #4e5558;
+      margin-top: 4px;
+      font-weight: 500;
+    }
+    .header-meta {
+      text-align: right;
+    }
+    .code-badge {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 8.5pt;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      background: #111416;
+      color: #fffdf9;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+    .status-badge {
+      display: inline-block;
+      font-size: 8pt;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      margin-left: 6px;
+    }
+    .status-in-progress { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .status-completed   { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .status-paused      { background: #fef9c3; color: #a16207; border: 1px solid #fef08a; }
+    .status-planning    { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+
+    .emission-date {
+      display: block;
+      font-size: 7.5pt;
+      color: #8d918f;
+      margin-top: 5px;
+      font-weight: 600;
+    }
+    .accent-bar {
+      margin-top: 12px;
+      height: 3px;
+      width: 100%;
+      border-radius: 2px;
+      background: #111416;
+      display: flex;
+      overflow: hidden;
+    }
+    .accent-bar .seg-orange { width: 90px; height: 100%; background: #d9772f; }
+    .accent-bar .seg-green  { width: 45px; height: 100%; background: #4c9b7a; }
+
+    /* ── SECCIONES ──────────────────────────────────────────────────────── */
+    .section {
+      margin-top: 18px;
+    }
+    .avoid-break {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .section-header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 8px;
+    }
+    .section-title {
+      font-size: 8.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #111416;
+    }
+    .section-subtitle {
+      text-align: right;
+      font-size: 7.5pt;
+      font-weight: 600;
+      color: #8d918f;
+    }
+    .pill-badge {
+      display: inline-block;
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #4e5558;
+      background: #f5f0e8;
+      border: 1px solid #d8d0c4;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    /* ── FICHA TÉCNICA ──────────────────────────────────────────────────── */
+    .ficha-card {
+      border: 1px solid #d8d0c4;
+      background: #fbf9f5;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .ficha-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .ficha-table td {
+      vertical-align: top;
+      padding-bottom: 8px;
+    }
+    .field-label {
+      font-size: 7pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #8d918f;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .field-value {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #111416;
+    }
+    .field-value-sm {
+      font-size: 8pt;
+      font-weight: 600;
+      color: #111416;
+    }
+    .divider-row {
+      border-top: 1px solid #ece6dc;
+      padding-top: 8px;
+    }
+
+    /* ── KPI CARDS ──────────────────────────────────────────────────────── */
+    .kpi-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .kpi-card {
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .kpi-card-real {
+      border: 1px solid #a3d4bb;
+      background: #f0f7f3;
+    }
+    .kpi-card-prog {
+      border: 1px solid #f5c6a5;
+      background: #fdf6f0;
+    }
+    .kpi-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .kpi-title-real {
+      font-size: 7.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #236343;
+    }
+    .kpi-title-prog {
+      font-size: 7.5pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #b9561d;
+    }
+    .kpi-number-real {
+      font-size: 26pt;
+      font-weight: 700;
+      line-height: 1;
+      color: #1b5e20;
+    }
+    .kpi-number-prog {
+      font-size: 26pt;
+      font-weight: 700;
+      line-height: 1;
+      color: #b9561d;
+    }
+    .kpi-unit {
+      font-size: 8pt;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+    .kpi-foot {
+      font-size: 7pt;
+      margin-top: 6px;
+      font-weight: 600;
+    }
+    .kpi-foot-real { color: #2e7d32; }
+    .kpi-foot-prog { color: #a84730; }
+
+    /* ── COMPARATIVA VISUAL ─────────────────────────────────────────────── */
+    .progress-bar-card {
+      margin-top: 10px;
+      border: 1px solid #d8d0c4;
+      background: #fffdf9;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .progress-legend-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 6px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #4e5558;
+    }
+    .progress-track {
+      position: relative;
+      height: 10px;
+      width: 100%;
+      background: #ece6dc;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    .progress-fill-real {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      background: #236343;
+      border-radius: 5px;
+      z-index: 2;
+    }
+    .progress-marker-prog {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      background: rgba(217, 119, 47, 0.25);
+      border-right: 3px solid #d9772f;
+      z-index: 3;
+    }
+
+    /* ── OBSERVACIONES ──────────────────────────────────────────────────── */
+    .obs-card {
+      margin-top: 10px;
+      border: 1px solid #d8d0c4;
+      border-left: 4px solid #d9772f;
+      background: #fdfbf7;
+      border-radius: 6px;
+      padding: 9px 12px;
+    }
+    .obs-title {
+      font-size: 7pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #b9561d;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .obs-text {
+      font-size: 8pt;
+      font-weight: 600;
+      font-style: italic;
+      color: #111416;
+      line-height: 1.4;
+    }
+
+    /* ── GRÁFICA VECTORIAL ──────────────────────────────────────────────── */
+    .chart-card {
+      border: 1px solid #d8d0c4;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 14px 14px 10px 14px;
+      text-align: center;
+    }
+    .chart-card svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ── TABLA DE CERTIFICACIONES ───────────────────────────────────────── */
+    .cert-table-wrapper {
+      border: 1px solid #d8d0c4;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #ffffff;
+    }
+    .cert-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 8pt;
+    }
+    .cert-table thead th {
+      background: #f5f0e8;
+      border-bottom: 1px solid #d8d0c4;
+      padding: 7px 10px;
+      text-align: left;
+      font-size: 7pt;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #4e5558;
+    }
+    .cert-table thead th.text-right {
+      text-align: right;
+    }
+    .cert-table thead th.text-center {
+      text-align: center;
+    }
+    .cert-table tbody tr {
+      border-bottom: 1px solid #ece6dc;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .cert-table tbody tr:nth-child(even) {
+      background: #fbf9f5;
+    }
+    .cert-table tbody td {
+      padding: 7px 10px;
+      vertical-align: middle;
+    }
+    .cert-table td.date-col {
+      font-weight: 700;
+      color: #111416;
+    }
+    .cert-table td.period-col {
+      color: #4e5558;
+      font-weight: 500;
+    }
+    .cert-table td.real-col {
+      text-align: center;
+      font-weight: 900;
+      color: #1b5e20;
+    }
+    .cert-table td.prog-col {
+      text-align: center;
+      font-weight: 900;
+      color: #b9561d;
+    }
+    .cert-table td.obs-col {
+      font-style: italic;
+      color: #4e5558;
+      font-size: 7.5pt;
+      line-height: 1.3;
+    }
+  </style>
+</head>
+<body>
+  <div class="report-container">
+
+    <!-- 1. MEMBRETE OFICIAL -->
+    <header class="header avoid-break">
+      <table class="header-table">
+        <tr>
+          <td style="width: 68%;">
+            <h1 class="header-title">FICHA OFICIAL DE AVANCE FÍSICO</h1>
+            <p class="header-subtitle">Control de planificación, ejecución física y seguimiento de cronograma</p>
+          </td>
+          <td class="header-meta" style="width: 32%;">
+            <div>
+              <span class="code-badge"><%= project.projectCode %></span>
+              <span class="status-badge <%= statusClass %>"><%= statusLabel %></span>
+            </div>
+            <span class="emission-date">Emisión: <%= emissionDateStr %></span>
+          </td>
+        </tr>
+      </table>
+
+      <div class="accent-bar">
+        <span class="seg-orange"></span>
+        <span class="seg-green"></span>
+      </div>
+    </header>
+
+    <!-- 2. FICHA TÉCNICA GENERAL DEL PROYECTO -->
+    <section class="section avoid-break">
+      <table class="section-header-table">
+        <tr>
+          <td><h2 class="section-title">1. Ficha Técnica General del Proyecto</h2></td>
+        </tr>
+      </table>
+
+      <div class="ficha-card">
+        <table class="ficha-table">
+          <tr>
+            <td style="width: 33.33%; padding-right: 10px;">
+              <span class="field-label">Nombre del Proyecto</span>
+              <div class="field-value"><%= project.projectName || project.fullName || project.projectCode %></div>
+            </td>
+            <td style="width: 33.33%; padding-right: 10px;">
+              <span class="field-label">Empresa Mandante / Cliente</span>
+              <div class="field-value-sm"><%= companyName %></div>
+            </td>
+            <td style="width: 33.34%;">
+              <span class="field-label">Planificador Responsable</span>
+              <div class="field-value-sm"><%= managerName %></div>
+            </td>
+          </tr>
+        </table>
+
+        <table class="ficha-table divider-row">
+          <tr>
+            <td style="width: 33.33%; padding-right: 10px;">
+              <span class="field-label">Código del Proyecto</span>
+              <div class="field-value-sm"><%= project.projectCode %></div>
+            </td>
+            <td style="width: 33.33%; padding-right: 10px;">
+              <span class="field-label">Fecha de Inicio</span>
+              <div class="field-value-sm"><%= startDateStr %></div>
+            </td>
+            <td style="width: 33.34%;">
+              <span class="field-label">Fecha Fin</span>
+              <div class="field-value-sm"><%= endDateStr %></div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. ESTADO DEL AVANCE FÍSICO ACTUAL -->
+    <section class="section avoid-break">
+      <table class="section-header-table">
+        <tr>
+          <td style="width: 65%;"><h2 class="section-title">2. Estado del Avance Físico (Último Corte)</h2></td>
+          <td class="section-subtitle" style="width: 35%;">
+            <% if (latestReport) { %>
+              <span class="pill-badge">Corte al <%= latestReportDateStr %></span>
+            <% } %>
+          </td>
+        </tr>
+      </table>
+
+      <!-- KPI CARDS -->
+      <table class="kpi-table">
+        <tr>
+          <td style="width: 50%; padding-right: 6px;">
+            <div class="kpi-card kpi-card-real">
+              <div class="kpi-header">
+                <span class="kpi-title-real">Avance Real Ejecutado</span>
+              </div>
+              <div style="margin-top: 4px;">
+                <span class="kpi-number-real"><%= actualPercent %>%</span>
+                <span class="kpi-unit" style="color: #236343;">ejecutado</span>
+              </div>
+              <p class="kpi-foot kpi-foot-real">Total certificado y verificado en obra</p>
+            </div>
+          </td>
+          <td style="width: 50%; padding-left: 6px;">
+            <div class="kpi-card kpi-card-prog">
+              <div class="kpi-header">
+                <span class="kpi-title-prog">Avance Programado</span>
+              </div>
+              <div style="margin-top: 4px;">
+                <span class="kpi-number-prog"><%= plannedPercent %>%</span>
+                <span class="kpi-unit" style="color: #b9561d;">meta</span>
+              </div>
+              <p class="kpi-foot kpi-foot-prog">Objetivo planificado para este corte</p>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- COMPARATIVA VISUAL -->
+      <div class="progress-bar-card">
+        <table class="progress-legend-table">
+          <tr>
+            <td style="width: 50%;">Comparativa Gráfica de Cumplimiento</td>
+            <td style="width: 50%; text-align: right;">
+              <span style="margin-right: 12px; color: #236343;">
+                ● Real (<%= actualPercent %>%)
+              </span>
+              <span style="color: #d9772f;">
+                ● Programado (<%= plannedPercent %>%)
+              </span>
+            </td>
+          </tr>
+        </table>
+        <div class="progress-track">
+          <div class="progress-fill-real" style="width: <%= Math.min(100, Math.max(0, actualPercent)) %>%;"></div>
+          <div class="progress-marker-prog" style="width: <%= Math.min(100, Math.max(0, plannedPercent)) %>%;"></div>
+        </div>
+      </div>
+
+      <!-- OBSERVACIONES DEL ÚLTIMO CORTE -->
+      <div class="obs-card">
+        <span class="obs-title">Puntos de Atención y Observaciones del Último Corte:</span>
+        <p class="obs-text">"<%= attentionPoints %>"</p>
+      </div>
+    </section>
+
+    <!-- 4. GRÁFICA DE EVOLUCIÓN (CURVA DE PROGRESO) -->
+    <section class="section avoid-break">
+      <table class="section-header-table">
+        <tr>
+          <td style="width: 70%;"><h2 class="section-title">3. Evolución del Avance Físico (Curva de Progreso)</h2></td>
+          <td class="section-subtitle" style="width: 30%;">Escala porcentual (0% - 100%)</td>
+        </tr>
+      </table>
+
+      <div class="chart-card">
+        <% if (chartSvg) { %>
+          <%- chartSvg %>
+        <% } else { %>
+          <div style="padding: 30px; color: #8d918f; font-weight: 600; font-size: 8.5pt;">
+            No hay registros suficientes de avance físico para graficar
+          </div>
+        <% } %>
+      </div>
+    </section>
+
+    <!-- 5. HISTORIAL DETALLADO DE CERTIFICACIONES -->
+    <% if (normalizedReports && normalizedReports.length > 0) { %>
+      <section class="section">
+        <table class="section-header-table avoid-break">
+          <tr>
+            <td style="width: 70%;">
+              <h2 class="section-title">4. Historial Detallado de Certificaciones (<%= normalizedReports.length %>)</h2>
+            </td>
+            <td class="section-subtitle" style="width: 30%;">Orden cronológico descendente</td>
+          </tr>
+        </table>
+
+        <div class="cert-table-wrapper">
+          <table class="cert-table">
+            <colgroup>
+              <col style="width: 16%;" />
+              <col style="width: 28%;" />
+              <col style="width: 12%;" />
+              <col style="width: 12%;" />
+              <col style="width: 32%;" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style="white-space: nowrap;">Fecha Emisión</th>
+                <th>Período de Medición</th>
+                <th class="text-center" style="white-space: nowrap;">Real</th>
+                <th class="text-center" style="white-space: nowrap;">Programado</th>
+                <th>Puntos de Atención</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% normalizedReports.slice().reverse().forEach(function(rep) { %>
+                <tr>
+                  <td class="date-col"><%= rep.formattedDate %></td>
+                  <td class="period-col"><%= rep.periodLabel %></td>
+                  <td class="real-col"><%= rep.actual %>%</td>
+                  <td class="prog-col"><%= rep.planned %>%</td>
+                  <td class="obs-col">"<%= rep.attentionPoints %>"</td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% } %>
+
+  </div>
+</body>
+</html>

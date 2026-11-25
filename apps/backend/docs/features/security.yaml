@@ -1,0 +1,210 @@
+# Security Feature
+
+paths:
+  /api/auth/send-otp:
+    post:
+      tags: [Seguridad]
+      summary: Enviar código OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: OTP enviado
+          content:
+            application/json:
+              example:
+                message: Si el email está registrado, recibirás un código
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '429':
+          description: Demasiados intentos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/verify-otp:
+    post:
+      tags: [Seguridad]
+      summary: Verificar código OTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  pattern: '^[0-9]{6}$'
+      responses:
+        '200':
+          description: Código verificado
+          content:
+            application/json:
+              example:
+                message: Código verificado correctamente
+        '400':
+          description: Código inválido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/request-password-reset:
+    post:
+      tags: [Seguridad]
+      summary: Solicitar reset de contraseña
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Si el email existe, se envía link
+          content:
+            application/json:
+              example:
+                message: Si el email está registrado, recibirás un enlace
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '429':
+          description: Demasiados intentos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/reset-password:
+    post:
+      tags: [Seguridad]
+      summary: Restablecer contraseña
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Contraseña restablecida
+          content:
+            application/json:
+              example:
+                message: Contraseña restablecida exitosamente
+        '400':
+          description: Token inválido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/change-password:
+    put:
+      tags: [Seguridad]
+      summary: Cambiar contraseña
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '200':
+          description: Contraseña cambiada
+          content:
+            application/json:
+              example:
+                message: Contraseña cambiada exitosamente
+        '400':
+          description: Contraseña actual incorrecta
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Informe Corporativo de Gestión</title>
+  <style>
+    @page { margin: 22px 28px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; font-size: 9pt; line-height: 1.5; }
+
+    /* ── HEADER ─────────────────────────────── */
+    .header { border-bottom: 3px solid #1e40af; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .header-left img { height: 40px; width: auto; }
+    .header-left-texts h1 { font-size: 15pt; margin: 0; font-weight: 800; color: #1e3a8a; }
+    .header-left-texts p { font-size: 8.5pt; color: #64748b; margin: 2px 0 0 0; }
+    .header-right { text-align: right; font-size: 8pt; color: #475569; }
+
+    /* ── BANNER RESUMEN ─────────────────────── */
+    .summary-banner { background: linear-gradient(135deg,#f8fafc,#f1f5f9); border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 18px; margin-bottom: 22px; display: flex; justify-content: space-around; align-items: center; }
+    .summary-item   { text-align: center; flex: 1; }
+    .summary-item .number { font-size: 20pt; font-weight: 800; line-height: 1.1; }
+    .summary-item .label  { font-size: 6.5pt; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #64748b; margin-top: 2px; }
+    .number.green { color: #16a34a; }
+    .number.red   { color: #dc2626; }
+    .number.gray  { color: #475569; }
+    .number.total { color: #1e293b; }
+    .divider-v { width: 1px; height: 40px; background: #e2e8f0; }
+
+    /* ── FICHA TÉCNICA ──────────────────────── */
+    .sheet-page   { page-break-before: always; margin-bottom: 0; }
+    .sheet-header { background: #1e40af; color: white; padding: 10px 14px; border-radius: 4px 4px 0 0; display: flex; justify-content: space-between; align-items: center; }
+    .sheet-header h2 { font-size: 11pt; font-weight: 800; margin: 0; }
+    .sheet-header .process-tag { font-size: 7.5pt; font-weight: 600; background: rgba(255,255,255,0.2); border-radius: 3px; padding: 2px 8px; }
+    .sheet-body { border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 4px 4px; padding: 16px; background: #ffffff; }
+
+    /* Identificación */
+    .id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-bottom: 14px; font-size: 8pt; }
+    .id-grid .id-item label { font-weight: 700; color: #64748b; font-size: 6.5pt; text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 1px; }
+    .id-grid .id-item span  { color: #1e293b; }
+
+    /* Gráfica */
+    .chart-section { margin: 14px 0; text-align: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 10px; }
+    .chart-section img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+    /* Tabla de resultados por periodo */
+    .results-table { width: 100%; border-collapse: collapse; font-size: 7.5pt; margin-top: 12px; }
+    .results-table thead th { background: #334155; color: white; padding: 7px 8px; text-align: left; font-size: 6.5pt; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; }
+    .results-table thead th:first-child { border-radius: 4px 0 0 0; }
+    .results-table thead th:last-child  { border-radius: 0 4px 0 0; }
+    .results-table tbody td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    .results-table tbody tr:nth-child(even) { background: #f8fafc; }
+
+    /* Badge cumplimiento */
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 6.5pt; font-weight: 700; letter-spacing: .4px; }
+    .badge.GREEN { background: #dcfce7; color: #166534; }
+    .badge.RED   { background: #fee2e2; color: #991b1b; }
+    .badge.GRAY  { background: #f1f5f9; color: #475569; }
+
+    /* Análisis y PA */
+    .analysis-box { margin-top: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #1e40af; border-radius: 3px; padding: 10px 12px; font-size: 8pt; }
+    .analysis-box h4 { font-size: 7pt; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; color: #64748b; margin-bottom: 4px; }
+    .analysis-box p  { color: #1e293b; line-height: 1.6; }
+
+    .pa-box { margin-top: 10px; border: 1px solid #fde68a; border-left: 3px solid #f59e0b; background: #fffbeb; border-radius: 3px; padding: 10px 12px; font-size: 8pt; }
+    .pa-box h4 { font-size: 7pt; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; color: #92400e; margin-bottom: 6px; }
+    .pa-table { width: 100%; border-collapse: collapse; font-size: 7pt; }
+    .pa-table th { background: #f59e0b; color: white; padding: 5px 7px; text-align: left; font-weight: 700; }
+    .pa-table td { padding: 5px 7px; border-bottom: 1px solid #fde68a; }
+
+    /* ── MATRIZ CONSOLIDADA ─────────────────── */
+    .matrix-section { page-break-before: always; }
+    .matrix-section h2 { font-size: 12pt; color: #1e40af; margin-bottom: 10px; }
+    table.matrix { width: 100%; border-collapse: collapse; font-size: 7.5pt; }
+    table.matrix thead th { background: #1e40af; color: white; font-weight: 700; font-size: 6.5pt; text-transform: uppercase; letter-spacing: .8px; padding: 8px; text-align: left; }
+    table.matrix thead th:first-child { border-radius: 4px 0 0 0; }
+    table.matrix thead th:last-child  { border-radius: 0 4px 0 0; }
+    table.matrix tbody td { padding: 7px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+    table.matrix tbody tr:nth-child(even) { background: #f8fafc; }
+    .cell-process { font-weight: 700; color: #1e293b; }
+    .cell-value   { font-weight: 700; text-align: center; }
+
+    /* ── FOOTER ─────────────────────────────── */
+    .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; font-size: 7pt; color: #94a3b8; }
+    .footer .org { font-weight: 600; color: #475569; }
+    .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-30deg); font-size: 55pt; color: rgba(30,64,175,.03); font-weight: 900; letter-spacing: 10px; z-index: -1; pointer-events: none; }
+
+    /* section title inside body */
+    .section-label { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #64748b; margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+  </style>
+</head>
+<body>
+  <div class="watermark">INFORME CORPORATIVO</div>
+
+  <!-- PORTADA / ENCABEZADO ================================================ -->
+  <div class="header">
+    <div class="header-left">
+      <% if (locals.logoBase64) { %>
+        <img src="<%= logoBase64 %>" alt="Logo" />
+      <% } %>
+      <div class="header-left-texts">
+        <h1>Informe de Gestión Corporativa</h1>
+        <p>Fichas Técnicas y Matriz Consolidada de Indicadores &mdash; Reporte Ejecutivo</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <strong>Fecha de emisión:</strong> <%= new Date().toLocaleDateString('es-ES', { day:'numeric', month:'long', year:'numeric' }) %><br>
+      <strong>Período:</strong> <%= new Date().toLocaleDateString('es-ES', { month:'long', year:'numeric' }) %>
+    </div>
+  </div>
+
+  <!-- CONTEXTO DEL REPORTE ================================================ -->
+  <% if (locals.reportContext) { %>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:4px;padding:10px 14px;margin-bottom:18px;font-size:8pt;display:flex;gap:20px;flex-wrap:wrap;">
+    <div>
+      <span style="font-size:6.5pt;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#64748b;display:block;margin-bottom:2px;">Proceso</span>
+      <strong><%= reportContext.processName %></strong>
+    </div>
+    <div>
+      <span style="font-size:6.5pt;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#64748b;display:block;margin-bottom:2px;">Intervalo</span>
+      <strong>
+        <%= reportContext.dateRange.startsAt || 'Sin fecha inicial' %>
+        &mdash;
+        <%= reportContext.dateRange.endsAt || 'Sin fecha final' %>
+      </strong>
+    </div>
+    <div>
+      <span style="font-size:6.5pt;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#64748b;display:block;margin-bottom:2px;">Generado</span>
+      <%= reportContext.generatedAt %>
+    </div>
+    <% if (reportContext.note) { %>
+    <div style="flex-basis:100%;border-top:1px solid #e2e8f0;padding-top:8px;margin-top:4px;">
+      <span style="font-size:6.5pt;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#64748b;display:block;margin-bottom:2px;">Nota</span>
+      <p style="color:#1e293b;line-height:1.5;margin:0;"><%= reportContext.note %></p>
+    </div>
+    <% } %>
+  </div>
+  <% } %>
+
+  <!-- FICHAS TÉCNICAS POR INDICADOR ======================================= -->
+  <% indicatorSections.forEach(function(ind, idx) { %>
+
+  <div class="sheet-page" <%- idx === 0 ? 'style="page-break-before: avoid;"' : '' %>>
+
+    <!-- Encabezado de la ficha -->
+    <div class="sheet-header">
+      <h2><%= ind.name %></h2>
+      <span class="process-tag"><%= ind.process %> &bull; <span style="font-family:monospace"><%= ind.code %></span></span>
+    </div>
+
+    <div class="sheet-body">
+
+      <!-- A. Identificación -->
+      <div class="section-label">A. Identificación del Indicador</div>
+      <div class="id-grid">
+        <div class="id-item"><label>Proceso</label><span><%= ind.process %></span></div>
+        <div class="id-item"><label>Código</label><span><%= ind.code %></span></div>
+        <div class="id-item"><label>Frecuencia de medición</label><span><%=
+          ({MONTHLY:'Mensual',QUARTERLY:'Trimestral',SEMIANNUAL:'Semestral',PROJECT_BASED:'Por proyecto'})[ind.frequency] || ind.frequency
+        %></span></div>
+        <div class="id-item"><label>Meta vigente</label><span>
+          <span>
+            <%= ind.direction === "AT_MOST" ? "Máximo " : ind.direction === "AT_LEAST" ? "Mínimo " : ind.direction === "RANGE" ? "Entre " : "" %>
+            <strong><%= ind.targetValue %> <%= ind.unit %></strong>
+          </span>
+        </span></div>
+        <div class="id-item" style="grid-column:span 2"><label>Fórmula / Método de cálculo</label><span><%= ind.formula %></span></div>
+        <div class="id-item"><label>Responsable de carga</label><span><%= ind.responsible %></span></div>
+        <div class="id-item"><label>Resultado más reciente</label>
+          <span>
+            <strong><%= ind.latestValue %></strong>
+            &nbsp;<span class="badge <%= ind.latestCompliance %>"><%=
+              ind.latestCompliance === 'GREEN' ? 'CUMPLE' : ind.latestCompliance === 'RED' ? 'NO CUMPLE' : 'S/D'
+            %></span>
+          </span>
+        </div>
+      </div>
+
+      <!-- B. Representación Gráfica -->
+      <div class="section-label">B. Representación Gráfica</div>
+      
+      <% if (ind.isPieChart) { %>
+        <div class="chart-section" style="margin-bottom: 8px;">
+          <img src="<%= ind.chartDataUrl %>" alt="Gráfica de tendencia de <%= ind.name %>">
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div class="chart-section" style="flex: 1; margin: 0;">
+            <img src="<%= ind.pieChartDataUrl %>" alt="Distribución de proveedores">
+          </div>
+          <div class="chart-section" style="flex: 1; margin: 0;">
+            <img src="<%= ind.barChartDataUrl %>" alt="Cantidad de proveedores">
+          </div>
+        </div>
+      <% } else { %>
+        <div class="chart-section">
+          <img src="<%= ind.chartDataUrl %>" alt="Gráfica de tendencia de <%= ind.name %>">
+        </div>
+      <% } %>
+
+      <!-- C. Tabla de Resultados por Período -->
+      <div class="section-label" style="margin-top:14px">C. Resultados por Período</div>
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th style="width:16%">Período</th>
+            <th style="width:13%;text-align:center">Resultado</th>
+            <th style="width:13%;text-align:center">Meta</th>
+            <th style="width:13%;text-align:center">Conclusión</th>
+            <th style="width:45%">Observación / Análisis</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% ind.rows.forEach(function(row) { %>
+          <tr>
+            <td><%= row.period %></td>
+            <td style="text-align:center;font-weight:700"><%= row.value !== null && row.value !== undefined ? row.value : '-' %></td>
+            <td style="text-align:center;color:#1e40af;font-weight:700">
+              <%= ind.direction === "AT_MOST" ? "Máximo " : ind.direction === "AT_LEAST" ? "Mínimo " : ind.direction === "RANGE" ? "Entre " : "" %><%= ind.targetValue %> <%= ind.unit %>
+            </td>
+            <td style="text-align:center"><span class="badge <%= row.trafficLight %>"><%= row.conclusion %></span></td>
+            <td style="font-size:7.5pt;color:#475569"><%= row.observation !== '-' ? row.observation : (row.internalAnalysis !== '-' ? row.internalAnalysis : '—') %></td>
+          </tr>
+          <% }); %>
+          <% if (!ind.rows || ind.rows.length === 0) { %>
+          <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:12px">Sin mediciones registradas en el período</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <!-- D. Análisis y Observación -->
+      <div class="analysis-box">
+        <h4>D. Análisis y Observación (último período)</h4>
+        <p><%= ind.latestObservation %></p>
+        <% if (ind.latestAnalysis && ind.latestAnalysis !== 'Sin análisis documentado.') { %>
+        <p style="margin-top:6px;color:#475569"><em>Análisis interno:</em> <%= ind.latestAnalysis %></p>
+        <% } %>
+      </div>
+
+      <!-- E. Plan de Acción (solo si no cumple y tiene planes) -->
+      <% if (ind.hasActionPlans && ind.actionPlans && ind.actionPlans.length > 0) { %>
+      <div class="pa-box">
+        <h4>E. Plan de Acción</h4>
+        <table class="pa-table">
+          <thead>
+            <tr>
+              <th style="width:50%">Acción</th>
+              <th style="width:20%">Fechas</th>
+              <th style="width:15%;text-align:center">Avance</th>
+              <th style="width:15%">Responsable</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% ind.actionPlans.forEach(function(ap) { %>
+            <tr>
+              <td><%= ap.action %></td>
+              <td><%= ap.dates %></td>
+              <td style="text-align:center;font-weight:700"><%= ap.progress %>%</td>
+              <td><%= ap.owner %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+
+    </div><!-- /.sheet-body -->
+  </div><!-- /.sheet-page -->
+  <% }); %>
+
+  <!-- MATRIZ CONSOLIDADA ================================================== -->
+  <div class="matrix-section">
+    <h2>Matriz Consolidada de Indicadores</h2>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th style="width:18%">Proceso</th>
+          <th style="width:28%">Indicador</th>
+          <th style="width:8%">Frec.</th>
+          <th style="width:10%">Meta</th>
+          <th style="width:10%">Resultado</th>
+          <th style="width:11%">Conclusión</th>
+          <th style="width:15%">Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% let lastProcess = ''; %>
+        <% matrix.forEach(function(row) { %>
+        <tr>
+          <td class="cell-process"><%= row.process !== lastProcess ? row.process : '' %><% lastProcess = row.process; %></td>
+          <td style="color:#475569"><%= row.indicator %></td>
+          <td style="text-align:center;font-size:7pt;color:#64748b"><%=
+            ({MONTHLY:'Mens.',QUARTERLY:'Trim.',SEMIANNUAL:'Sem.',PROJECT_BASED:'Proy.'})[row.frequency] || row.frequency
+          %></td>
+          <td style="text-align:center"><strong><%= row.target !== null && row.target !== undefined ? row.target + (row.unit || '') : '-' %></strong></td>
+          <td class="cell-value"><%= row.value !== null && row.value !== undefined ? row.value : '-' %></td>
+          <td style="text-align:center">
+            <span class="badge <%= row.trafficLight %>"><%=
+              row.trafficLight === 'GREEN' ? 'CUMPLE' : row.trafficLight === 'RED' ? 'NO CUMPLE' : 'S/D'
+            %></span>
+          </td>
+          <td style="font-size:7pt;color:#64748b"><%= row.observation ? row.observation.substring(0,80) : '-' %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER ============================================================== -->
+  <div class="footer">
+    <div><span class="org">Sistema de Gestión Corporativa</span> &mdash; Módulo de Seguimiento de Indicadores</div>
+    <div>Generado el <%= new Date().toLocaleDateString('es-ES') %> &bull; Documento oficial</div>
+  </div>
+
+</body>
+</html>

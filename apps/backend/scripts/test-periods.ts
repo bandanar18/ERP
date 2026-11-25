@@ -1,0 +1,1 @@
+import '../src/config/load-env.js'; import { prisma } from '../src/prisma/prisma.js'; async function main() { const m = await prisma.qcMeasurement.findMany({ include: { period: true }, take: 10 }); console.log(JSON.stringify(m.map(x => ({ startsAt: x.period.startsAt, endsAt: x.period.endsAt })), null, 2)); } main().finally(() => prisma.$disconnect());

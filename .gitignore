@@ -1,0 +1,45 @@
+node_modules/
+dist/
+.env
+coverage/
+logs/
+*.log
+*.env
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+*.bak
+*.tmp
+*.pid
+*.codegraph
+*.seed
+*.pid.lock
+*.tsbuildinfo
+*.eslintcache
+*.prettiercache
+*.zip
+*.tar.gz
+*.tgz
+.turbo/
+.kombai/
+.codebase-memory/
+.task/
+
+# ── Lockfiles (solo pnpm) ──
+package-lock.json
+yarn.lock
+
+# ── Prisma temporales ──
+temp.prisma
+tmp*.prisma
+*.prisma.bak
+
+# ── Misc ──
+*.orig
+.cache/
+*.local
+
+# ── pnpm store local ──
+.pnpm-store/

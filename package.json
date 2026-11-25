@@ -1,0 +1,60 @@
+{
+  "name": "proyecto_business_erp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "turbo run dev",
+    "executive:db:seed": "pnpm --filter backend db:seed",
+    "build": "turbo run build --filter=frontend --filter=backend",
+    "start": "pnpm --filter backend start:prod",
+    "production": "pnpm turbo run build --filter=frontend --filter=backend && pnpm --filter backend start:prod",
+    "production:seed": "pnpm turbo run build --filter=frontend --filter=backend && pnpm --filter backend start:prod:seed",
+    "seed:prod": "turbo run seed:prod",
+    "tunnel": "pnpm --filter backend tunnel",
+    "tunnel:local": "pnpm --filter backend tunnel:local",
+    "mobile": "pnpm --filter business-erp-app start",
+    "mobile:web": "pnpm --filter business-erp-app web",
+    "mobile:android": "pnpm --filter business-erp-app android",
+    "mobile:ios": "pnpm --filter business-erp-app ios",
+    "mobile:typecheck": "pnpm --filter business-erp-app typecheck",
+    "mobile:build": "pnpm --filter business-erp-app build",
+    "prisma:generate": "pnpm --filter backend db:generate",
+    "prisma:push": "pnpm --filter backend db:push",
+    "prisma:migrate": "pnpm --filter backend db:migrate",
+    "prisma:migrate:dev": "pnpm --filter backend db:migrate:dev",
+    "prisma:migrate:deploy": "pnpm --filter backend db:migrate:deploy",
+    "prisma:migrate:reset": "pnpm --filter backend db:migrate:reset",
+    "prisma:studio": "pnpm --filter backend db:studio",
+    "prisma:seed": "pnpm --filter backend db:seed",
+    "prisma:seed:init": "pnpm --filter backend db:seed:init",
+    "prisma:seed:basic": "pnpm --filter backend db:seed:basic",
+    "prisma:seed:pm": "pnpm --filter backend db:seed:pm",
+    "s": "pnpm --filter backend db:seed:qc",
+    "prisma:seed:demo": "pnpm --filter backend db:seed:demo",
+    "prisma:seed:payables": "pnpm --filter backend db:seed:payables",
+    "prisma:seed:prod": "pnpm --filter backend db:seed:prod",
+    "prisma:migrate:pm": "pnpm --filter backend db:migrate:pm",
+    "prisma:drop:legacy": "pnpm --filter backend db:drop:legacy",
+    "prisma:sync:pm-names": "pnpm --filter backend db:sync:pm-names",
+    "prisma:reset": "pnpm --filter backend db:reset",
+    "test:pm": "pnpm --filter backend test:pm",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "workspaces": [
+    "apps/*"
+  ],
+  "packageManager": "pnpm@11.2.2",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^22.19.19",
+    "turbo": "^2.9.14"
+  },
+  "dependencies": {
+    "react-router-dom": "^7.15.1",
+    "tslib": "^2.8.1"
+  }
+}

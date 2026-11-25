@@ -1,0 +1,24 @@
+model ErpUser {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  firstName           String
+  lastName            String
+  roleId              String?
+  companyId           String?
+  isActive            Boolean              @default(true)
+  emailVerified       Boolean              @default(false)
+  otpSecret           String?
+  otpExpiresAt        DateTime?
+  otpAttempts         Int                  @default(0)
+  lastOtpSentAt       DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  module_memberships  ErpModuleMembership[]
+  otpTokens           ErpOtpToken[]
+  passwordResetTokens ErpPasswordResetToken[]
+  company             PmCompany?             @relation(fields: [companyId], references: [id])
+  role                ErpRole?             @relation(fields: [roleId], references: [id])
+
+  @@map("erp_users")
+}

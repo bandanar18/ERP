@@ -1,0 +1,12 @@
+model ErpOtpToken {
+  id        String   @id @default(uuid())
+  email     String
+  userId    String?
+  code      String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      ErpUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("erp_otp_tokens")
+}

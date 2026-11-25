@@ -1,0 +1,223 @@
+# Projects API
+
+tags:
+  - name: Proyectos
+    description: Gestión de proyectos con multi-tenancy y control por roles
+
+paths:
+  /api/projects:
+    get:
+      tags: [Proyectos]
+      summary: Listar proyectos
+      description: |
+        **planificador**: Sus proyectos asignados
+        **gestion/administrador**: TODOS los proyectos
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de proyectos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary:
+                    type: object
+                  projects:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        projectId:
+                          type: string
+                        projectCode:
+                          type: string
+                        projectName:
+                          type: string
+                        companyId:
+                          type: string
+                        companyName:
+                          type: string
+                        manager:
+                          type: object
+                          nullable: true
+                          properties:
+                            managerId:
+                              type: string
+                            managerName:
+                              type: string
+                            managerEmail:
+                              type: string
+                        lastProgress:
+                          type: object
+                          nullable: true
+                          properties:
+                            id:
+                              type: string
+                            date:
+                              type: string
+                            actualProgress:
+                              type: string
+                            plannedProgress:
+                              type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Proyectos]
+      summary: Crear proyecto
+      description: Solo rol 'gestion'
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, fullName]
+              properties:
+                code:
+                  type: string
+                fullName:
+                  type: string
+                shortName:
+                  type: string
+                managerId:
+                  type: string
+                status:
+                  type: string
+                  enum: [PENDING, ACTIVE, ON_HOLD, COMPLETED, CANCELLED]
+      responses:
+        '201':
+          description: Proyecto creado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  code:
+                    type: string
+                  fullName:
+                    type: string
+        '403':
+          description: Solo rol 'gestion'
+
+  /api/projects/companies:
+    get:
+      tags: [Proyectos]
+      summary: Listar empresas
+      description: |
+        **planificador**: Sus empresas
+        **gestion/administrador**: Todas las empresas
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de empresas
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/projects/company/{companyId}:
+    get:
+      tags: [Proyectos]
+      summary: Proyectos de una empresa
+      description: |
+        **planificador**: Sus proyectos en esa empresa
+        **gestion/administrador**: Todos los proyectos
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Proyectos de la empresa
+        '404':
+          description: Empresa no encontrada
+
+  /api/projects/{id}:
+    get:
+      tags: [Proyectos]
+      summary: Obtener proyecto
+      description: |
+        **planificador**: Solo si es el manager
+        **gestion/administrador**: Cualquier proyecto
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalle del proyecto
+        '404':
+          description: Proyecto no encontrado
+
+    put:
+      tags: [Proyectos]
+      summary: Actualizar proyecto
+      description: Solo rol 'gestion'
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fullName:
+                  type: string
+                managerId:
+                  type: string
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Proyecto actualizado
+        '403':
+          description: Solo rol 'gestion'
+
+components:
+  responses:
+    Unauthorized:
+      description: No autenticado
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error]
+            properties:
+              error:
+                type: string
+
+    Forbidden:
+      description: Sin permisos
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error, code]
+            properties:
+              error:
+                type: string
+              code:
+                type: string

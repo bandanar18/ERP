@@ -1,0 +1,1039 @@
+# Módulo Ejecutivo — Sistema de Seguimiento de Indicadores
+# Fusionado desde el proyecto "Resumen Ejecutivo" como módulo nativo del ERP.
+# JWT y roles PROPIOS del módulo (EXECUTIVE_JWT_SECRET), independientes del ERP.
+
+tags:
+  - name: Módulo Ejecutivo
+    description: |
+      Sistema de Seguimiento de Indicadores (procesos, indicadores, mediciones,
+      dashboard, reportes, exports, administración). Autenticación con JWT
+      propio del módulo y roles ADMIN / DIRECTOR / PROCESS_OWNER.
+
+paths:
+  # ────────────────────────────────────────────────────────────
+  # AUTH (módulo propio)
+  # ────────────────────────────────────────────────────────────
+  /api/executive/auth/login:
+    post:
+      tags: [Módulo Ejecutivo]
+      summary: Iniciar sesión (módulo ejecutivo)
+      description: |
+        Autentica con el JWT PROPIO del módulo (EXECUTIVE_JWT_SECRET), aislado
+        del JWT del ERP. Rate limit: 10 intentos/minuto.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token de acceso + perfil enriquecido (roles, permisos, scopes) + redirectUrl
+        '400':
+          description: Validación fallida
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Demasiados intentos (rate limit)
+
+  /api/executive/auth/register:
+    post:
+      tags: [Módulo Ejecutivo]
+      summary: Registrar usuario del módulo
+      description: |
+        Crea un usuario con rol por defecto PROCESS_OWNER. Rate limit:
+        5 intentos/minuto. La contraseña se limita a 72 bytes (límite bcrypt).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+      responses:
+        '201':
+          description: Usuario creado con token de acceso
+        '400':
+          description: Validación fallida
+        '409':
+          description: El correo ya está registrado
+
+  /api/executive/auth/me:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Perfil del usuario autenticado
+      description: |
+        Devuelve el perfil enriquecido reconstruido desde la BD en cada
+        request: roles, permisos planos y scopes (procesos asignados).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil enriquecido del usuario
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executive/auth/me/context:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Perfil del usuario (deprecado)
+      description: |
+        DEPRECADO — duplicado de GET /auth/me. Se conserva por compatibilidad.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Perfil enriquecido del usuario
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executive/auth/me/redirect:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Ruta post-login calculada en el servidor
+      description: |
+        Devuelve la URL de redirección según el rol, calculada solo en el
+        servidor (el cliente nunca aprende el mapeo rol→ruta).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ruta de redirección
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  path:
+                    type: string
+                    example: /admin
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────────────────────────────────────────────
+  # PROCESOS
+  # ────────────────────────────────────────────────────────────
+  /api/executive/processes:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar procesos (CORP_MAIN)
+      description: Solo procesos de la organización CORP_MAIN (Nexoil excluida).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de procesos con subprocesos e indicadores
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executive/processes/mine:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Procesos asignados al usuario
+      description: Procesos asignados vía UserProcessAssignment (útil para PROCESS_OWNER).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Procesos asignados con indicadores y última medición
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ────────────────────────────────────────────────────────────
+  # INDICADORES
+  # ────────────────────────────────────────────────────────────
+  /api/executive/indicators/{id}:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Detalle de un indicador
+      description: |
+        Detalle con versión activa, metas, y últimas mediciones.
+        Scope: PROCESS_OWNER solo puede acceder a indicadores de procesos
+        asignados (403 en caso contrario).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del indicador (o 'GENERAL' para el agregado)
+      responses:
+        '200':
+          description: Detalle del indicador
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Indicador no encontrado
+
+  /api/executive/indicators/{id}/chart:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Datos de la gráfica de tendencia
+      description: |
+        Serie por período del calendario (los períodos sin medición conservan
+        su columna). `id=GENERAL` devuelve el promedio corporativo.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID del indicador o 'GENERAL'
+        - name: periodId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Array de puntos { period, meta, medicion, tendencia, trafficLight }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/indicators/{id}/procurement-distribution:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Distribución de proveedores (Procura)
+      description: Totales confiables / requieren mejoras / suspendidos y % de confiables.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: startsAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+        - name: endsAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Distribución de proveedores
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────────────────────────────────────────────────────────
+  # MEDICIONES
+  # ────────────────────────────────────────────────────────────
+  /api/executive/measurements:
+    post:
+      tags: [Módulo Ejecutivo]
+      summary: Registrar una medición
+      description: |
+        Calcula el valor (fórmula mathjs o directo), evalúa el semáforo contra
+        la meta vigente y guarda la medición como SUBMITTED. Scope: el
+        PROCESS_OWNER solo puede medir indicadores de procesos asignados.
+        Única por (versión, período) — duplicados → 400.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [indicatorVersionId, periodId]
+              properties:
+                indicatorVersionId:
+                  type: string
+                  format: uuid
+                periodId:
+                  type: string
+                  format: uuid
+                directValue:
+                  type: number
+                  description: Para indicadores DIRECT_VALUE
+                inputs:
+                  type: object
+                  additionalProperties:
+                    type: number
+                  description: Entradas de la fórmula (FORMULA_INPUTS)
+                observation:
+                  type: string
+                analysisInternal:
+                  type: string
+                analysisExternal:
+                  type: string
+                evidenceIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '201':
+          description: Medición creada con valor y semáforo calculados
+        '400':
+          description: Validación fallida, período cerrado o duplicado
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar mediciones
+      description: |
+        PROCESS_OWNER: solo mediciones de sus procesos asignados.
+        ADMIN/DIRECTOR: todas (CORP_MAIN).
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [DRAFT, SUBMITTED, APPROVED, REJECTED, LOCKED]
+      responses:
+        '200':
+          description: Lista de mediciones con indicador, período y responsable
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executive/measurements/{id}/review:
+    patch:
+      tags: [Módulo Ejecutivo]
+      summary: Revisar una medición
+      description: |
+        Solo ADMIN/DIRECTOR. Solo mediciones SUBMITTED pueden revisarse;
+        una vez aprobada no se puede volver a revisar.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [APPROVED, REJECTED]
+                observation:
+                  type: string
+                analysisInternal:
+                  type: string
+      responses:
+        '200':
+          description: Medición revisada
+        '400':
+          description: Estado inválido o medición no revisable
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────────────────────────────────────────────────────────
+  # DASHBOARD
+  # ────────────────────────────────────────────────────────────
+  /api/executive/dashboard/summary:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Resumen global de cumplimiento
+      description: "Roles: ADMIN, DIRECTOR. Conteo total/green/red/gray."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen global
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/dashboard/admin/summary:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Resumen para administración
+      description: Solo ADMIN.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen global
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/dashboard/director/summary:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Resumen para dirección
+      description: Solo DIRECTOR.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen global
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/dashboard/owner/summary:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Resumen del dueño de proceso
+      description: Resumen limitado a los procesos asignados al usuario.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resumen por scopes del usuario
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executive/dashboard/matrix:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Matriz consolidada de indicadores
+      description: "Roles: ADMIN, DIRECTOR. Todos los indicadores con última medición."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Matriz consolidada
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/dashboard/active-period:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Período de reporte activo
+      description: Último período con estado OPEN.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Período activo o null
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/executive/dashboard/director/trend:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Tendencia de cumplimiento por proceso
+      description: "Roles: ADMIN, DIRECTOR. Serie mensual con desglose por proceso."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tendencia de cumplimiento
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────────────────────────────────────────────────────────
+  # REPORTES
+  # ────────────────────────────────────────────────────────────
+  /api/executive/reports/performance:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Reporte de desempeño
+      description: "Roles: ADMIN, DIRECTOR. Resumen por indicador y por proceso."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: periodId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reporte de desempeño
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────────────────────────────────────────────────────────
+  # EXPORTS (PDF / XLSX)
+  # ────────────────────────────────────────────────────────────
+  /api/executive/exports/pdf:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Exportar informe PDF
+      description: |
+        Roles: ADMIN, DIRECTOR. Genera el informe corporativo (fichas técnicas
+        + matriz consolidada) con gráficas SVG y renderizado con puppeteer.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: processId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: startsAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: '2026-01-01'
+        - name: endsAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: '2026-06-30'
+        - name: chartVariant
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [LINE, BAR]
+          default: BAR
+        - name: note
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archivo PDF (application/pdf)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Fechas inválidas o error de generación
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/exports/xlsx:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Exportar matriz XLSX
+      description: "Roles: ADMIN, DIRECTOR. Matriz consolidada con estilos por semáforo."
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: processId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: startsAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: '2026-01-01'
+        - name: endsAt
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          example: '2026-06-30'
+        - name: note
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archivo XLSX (application/vnd.openxmlformats-officedocument.spreadsheetml.sheet)
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Fechas inválidas o error de generación
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────────────────────────────────────────────────────────
+  # ADMIN — INDICADORES
+  # ────────────────────────────────────────────────────────────
+  /api/executive/admin/indicators:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar indicadores (admin)
+      description: Solo ADMIN. Lista con proceso y versión activa.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de indicadores
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Módulo Ejecutivo]
+      summary: Crear indicador con versión y meta
+      description: |
+        Solo ADMIN. Crea indicador + versión inicial + meta (transacción) y
+        registra auditoría. Código duplicado → 409.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name, processId, frequency, direction, targetValue, unit, thresholds]
+              properties:
+                code:
+                  type: string
+                  maxLength: 20
+                name:
+                  type: string
+                  maxLength: 200
+                processId:
+                  type: string
+                  format: uuid
+                subprocessId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                projectId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                frequency:
+                  type: string
+                  enum: [MONTHLY, QUARTERLY, SEMIANNUAL, PROJECT_BASED]
+                direction:
+                  type: string
+                  enum: [AT_LEAST, AT_MOST, RANGE]
+                formula:
+                  type: string
+                  nullable: true
+                targetValue:
+                  type: number
+                unit:
+                  type: string
+                thresholds:
+                  type: object
+                  properties:
+                    green:
+                      type: number
+                    yellow:
+                      type: number
+                    orange:
+                      type: number
+                    red:
+                      type: number
+                effectiveFrom:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Indicador creado
+        '400':
+          description: Validación fallida o proceso inexistente
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Código duplicado
+
+  /api/executive/admin/indicators/{id}:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Detalle de indicador (admin)
+      description: Solo ADMIN. Con todas sus versiones y metas.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle del indicador
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Indicador no encontrado
+
+    patch:
+      tags: [Módulo Ejecutivo]
+      summary: Actualizar indicador (con versionado)
+      description: |
+        Solo ADMIN. Si cambian campos técnicos (frecuencia, dirección, fórmula,
+        meta, etc.) se cierra la versión activa y se crea una nueva.
+        Registra auditoría.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                processId:
+                  type: string
+                  format: uuid
+                subprocessId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                projectId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                chartType:
+                  type: string
+                  enum: [LINE, PIE]
+                frequency:
+                  type: string
+                  enum: [MONTHLY, QUARTERLY, SEMIANNUAL, PROJECT_BASED]
+                direction:
+                  type: string
+                  enum: [AT_LEAST, AT_MOST, RANGE]
+                formula:
+                  type: string
+                  nullable: true
+                inputMode:
+                  type: string
+                  enum: [DIRECT_VALUE, FORMULA_INPUTS]
+                displayAsPercent:
+                  type: boolean
+                aggregation:
+                  type: string
+                  enum: [LAST_VALUE, SUM, AVERAGE, WEIGHTED_AVERAGE, CUMULATIVE_RATIO]
+                targetValue:
+                  type: number
+                unit:
+                  type: string
+                thresholds:
+                  type: object
+      responses:
+        '200':
+          description: Indicador actualizado
+        '400':
+          description: Validación fallida
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Indicador no encontrado
+
+  # ────────────────────────────────────────────────────────────
+  # ADMIN — PROCESOS
+  # ────────────────────────────────────────────────────────────
+  /api/executive/admin/processes:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar procesos (admin)
+      description: Solo ADMIN. Con subprocesos, proyectos, indicadores y conteos.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de procesos
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [Módulo Ejecutivo]
+      summary: Crear proceso
+      description: Solo ADMIN. Código duplicado → 409. Registra auditoría.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, name]
+              properties:
+                code:
+                  type: string
+                  maxLength: 20
+                name:
+                  type: string
+                  maxLength: 200
+                parentId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '201':
+          description: Proceso creado
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Código duplicado
+
+  /api/executive/admin/processes/{id}:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Detalle de proceso (admin)
+      description: Solo ADMIN.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalle del proceso
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Proceso no encontrado
+
+    patch:
+      tags: [Módulo Ejecutivo]
+      summary: Actualizar proceso
+      description: Solo ADMIN. Valida unicidad de código y ausencia de referencias circulares.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                name:
+                  type: string
+                parentId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        '200':
+          description: Proceso actualizado
+        '400':
+          description: Validación fallida
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Proceso no encontrado
+        '409':
+          description: Código duplicado o referencia circular
+
+  # ────────────────────────────────────────────────────────────
+  # USUARIOS (RBAC del módulo)
+  # ────────────────────────────────────────────────────────────
+  /api/executive/users:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar usuarios del módulo
+      description: Solo ADMIN. Con roles, permisos y asignaciones de proceso.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de usuarios
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/users/roles:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar roles con permisos
+      description: Solo ADMIN.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Roles con permisos
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/users/permissions:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Listar permisos
+      description: Solo ADMIN.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Permisos del módulo
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/users/{id}/roles:
+    patch:
+      tags: [Módulo Ejecutivo]
+      summary: Reemplazar roles de un usuario
+      description: Solo ADMIN. Reemplazo atómico; roles inexistentes → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+                    example: PROCESS_OWNER
+      responses:
+        '200':
+          description: Roles actualizados
+        '400':
+          description: Validación fallida o rol inexistente
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/users/{id}/scopes:
+    patch:
+      tags: [Módulo Ejecutivo]
+      summary: Reemplazar scopes (procesos asignados)
+      description: Solo ADMIN. Reemplazo atómico; procesos inexistentes → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [processIds]
+              properties:
+                processIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Scopes actualizados
+        '400':
+          description: Validación fallida o proceso inexistente
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/executive/users/roles/{id}/permissions:
+    patch:
+      tags: [Módulo Ejecutivo]
+      summary: Reemplazar permisos de un rol
+      description: Solo ADMIN. Reemplazo atómico; permisos inexistentes → 400.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [permissionIds]
+              properties:
+                permissionIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Permisos actualizados
+        '400':
+          description: Validación fallida o permiso inexistente
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ────────────────────────────────────────────────────────────
+  # AUDITORÍA
+  # ────────────────────────────────────────────────────────────
+  /api/executive/audit-logs:
+    get:
+      tags: [Módulo Ejecutivo]
+      summary: Bitácora de auditoría del módulo
+      description: "Roles: ADMIN, DIRECTOR. Últimas 200 entradas."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bitácora de auditoría
+        '403':
+          $ref: '#/components/responses/Forbidden'

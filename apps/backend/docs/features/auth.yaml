@@ -1,0 +1,790 @@
+# Authentication Feature
+
+tags:
+  - name: Autenticacion
+    description: Operaciones de autenticacion y gestion de sesion de usuarios
+  - name: Seguridad
+    description: Operaciones de seguridad (OTP, recuperacion de contrasena)
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [Autenticacion]
+      summary: Registrar nuevo usuario
+      description: |
+        Crea una nueva cuenta de usuario. Publico - no requiere autenticacion.
+
+        El parametro `roleName` es opcional. Si se envia, se asigna ese rol al usuario.
+        Si no se envia, el usuario queda sin rol (pendiente de asignacion).
+
+        Respuestas segun el estado del usuario:
+        - Con rol asignado: Devuelve tokens de acceso
+        - Sin rol: El usuario debe esperar asignacion de rol y empresa
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, firstName, lastName]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Correo electronico del usuario
+                password:
+                  type: string
+                  minLength: 8
+                  description: "Contrasena minimo 8 caracteres"
+                firstName:
+                  type: string
+                  minLength: 2
+                  description: Nombre del usuario
+                lastName:
+                  type: string
+                  minLength: 2
+                  description: Apellido del usuario
+                roleName:
+                  type: string
+                  description: "Rol a asignar (opcional). Ejemplos: administrador, gestion, contador, etc."
+      responses:
+        '201':
+          description: Usuario registrado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      isActive:
+                        type: boolean
+                      emailVerified:
+                        type: boolean
+                      roleName:
+                        type: string
+                        nullable: true
+                  tokens:
+                    type: object
+                    properties:
+                      accessToken:
+                        type: string
+                      refreshToken:
+                        type: string
+        '400':
+          description: Error de validacion o datos incompletos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+        '429':
+          description: Demasiados intentos - rate limit excedido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/login:
+    post:
+      tags: [Autenticacion]
+      summary: Iniciar sesion
+      description: |
+        Autentica un usuario con email y contrasena. Publico - no requiere autenticacion.
+
+        La respuesta varia segun el estado del usuario:
+
+        1. Usuario COMPLETO (con rol y empresa):
+           - Devuelve tokens de acceso (accessToken, refreshToken)
+           - Puede acceder a toda la aplicacion
+
+        2. Usuario PENDIENTE de rol (sin rol asignado):
+           - Devuelve requiresOtp: true
+           - Se envia un codigo OTP al email
+           - Debe esperar asignacion de rol por un administrador
+
+        3. Usuario PENDIENTE de empresa (con rol pero sin empresa):
+           - Devuelve pendingCompany: true
+           - Tiene acceso limitado
+           - Debe esperar asignacion de empresa
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  description: Correo electronico del usuario
+                password:
+                  type: string
+                  description: Contrasena del usuario
+      responses:
+        '200':
+          description: Login exitoso - respuesta varia segun estado del usuario
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  # Usuario completo
+                  - type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          email:
+                            type: string
+                          firstName:
+                            type: string
+                          lastName:
+                            type: string
+                          roleName:
+                            type: string
+                      tokens:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                          refreshToken:
+                            type: string
+                  # Usuario pendiente de OTP (sin rol)
+                  - type: object
+                    properties:
+                      requiresOtp:
+                        type: boolean
+                        enum: [true]
+                      message:
+                        type: string
+                        example: Tu cuenta esta siendo procesada. Te hemos enviado un codigo de verificacion.
+                      email:
+                        type: string
+                  # Usuario pendiente de empresa
+                  - type: object
+                    properties:
+                      user:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            format: uuid
+                          email:
+                            type: string
+                          firstName:
+                            type: string
+                          lastName:
+                            type: string
+                          roleName:
+                            type: string
+                      tokens:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                          refreshToken:
+                            type: string
+                      pendingCompany:
+                        type: boolean
+                        enum: [true]
+                      message:
+                        type: string
+                        example: Tu cuenta esta activa pero aun no has sido asignado a una empresa.
+        '400':
+          description: Credenciales no proporcionadas
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+        '401':
+          description: Credenciales invalidas, cuenta inactiva o no verificada
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                    enum: [INVALID_CREDENTIALS, ACCOUNT_INACTIVE, EMAIL_NOT_VERIFIED]
+        '429':
+          description: Demasiados intentos - rate limit excedido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/refresh:
+    post:
+      tags: [Autenticacion]
+      summary: Refrescar token de acceso
+      description: |
+        Obtiene un nuevo accessToken usando un refreshToken valido. Publico - no requiere autenticacion.
+
+        Util cuando el accessToken expira pero el refreshToken sigue vigente.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  description: Token de refresco vigente
+      responses:
+        '200':
+          description: Token refrescado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    description: Nuevo token de acceso
+                  refreshToken:
+                    type: string
+                    description: Nuevo token de refresco
+        '401':
+          description: Token invalido o expirado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+                    enum: [INVALID_TOKEN]
+
+  /api/auth/logout:
+    post:
+      tags: [Autenticacion]
+      summary: Cerrar sesion
+      description: |
+        Endpoint de logout. Publico - no requiere autenticacion.
+
+        Nota: El cliente debe eliminar los tokens almacenados localmente.
+        Los tokens JWT son stateless, por lo que no se invalidan en el servidor.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+                  description: "Token a eliminar para referencia futura de blacklist"
+      responses:
+        '200':
+          description: Logout exitoso
+          content:
+            application/json:
+              example:
+                message: Logout exitoso. Elimina los tokens del lado del cliente.
+        '401':
+          description: Token invalido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/me:
+    get:
+      tags: [Autenticacion]
+      summary: Obtener usuario actual
+      description: |
+        Retorna la informacion del usuario autenticado.
+
+        Requiere: Token de acceso valido (bearerAuth)
+        Acceso: Cualquier usuario autenticado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Usuario obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      firstName:
+                        type: string
+                      lastName:
+                        type: string
+                      roleName:
+                        type: string
+                        nullable: true
+                      companyId:
+                        type: string
+                        format: uuid
+                        nullable: true
+        '401':
+          description: No autenticado o token invalido
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+
+  /api/auth/init-roles:
+    post:
+      tags: [Autenticacion]
+      summary: Inicializar roles del sistema
+      description: |
+        Crea los roles base del sistema si no existen.
+
+        Requiere: Ninguno (publico)
+        Uso: Solo para inicializacion del sistema o desarrollo
+        Roles creados: administrador, gestion, contador, ventas, operacion, cliente, colaborador
+      security: []
+      responses:
+        '200':
+          description: Roles inicializados correctamente
+          content:
+            application/json:
+              example:
+                message: Roles inicializados correctamente
+                count: 7
+
+  /api/auth/users/{id}/assign:
+    put:
+      tags: [Autenticacion]
+      summary: Asignar rol y/o empresa a un usuario
+      description: |
+        Actualiza el rol y/o la empresa de un usuario especifico.
+
+        Requiere: Token de acceso valido
+        Acceso: Solo rol 'administrador'
+
+        Puede asignar:
+        - Solo rol (roleName)
+        - Solo empresa (companyId)
+        - Ambos simultaneamente
+
+        Segun lo que se asigne, se enviara un email diferente al usuario.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID del usuario a modificar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roleName:
+                  type: string
+                  description: "Nombre del rol a asignar. Ejemplos: gestion, contador"
+                  nullable: true
+                companyId:
+                  type: string
+                  format: uuid
+                  description: ID de la empresa a asignar
+                  nullable: true
+      responses:
+        '200':
+          description: Usuario actualizado correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Perfil del usuario actualizado correctamente
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                      roleName:
+                        type: string
+                        nullable: true
+                      companyId:
+                        type: string
+                        format: uuid
+                        nullable: true
+        '400':
+          description: Datos invalidos o faltantes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string
+        '403':
+          description: Solo administradores pueden realizar esta accion
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/send-otp:
+    post:
+      tags: [Autenticacion]
+      summary: Enviar codigo OTP
+      description: |
+        Envia un codigo de un solo uso (OTP) al email del usuario.
+
+        Requiere: Ninguno (publico)
+        Uso: Verificacion de identidad para usuarios pendientes de asignacion
+
+        Aplica rate limiting para prevenir abuso.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: OTP enviado correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  expiresAt:
+                    type: string
+                    format: date-time
+        '400':
+          description: Email invalido o no encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '429':
+          description: Demasiados intentos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/verify-otp:
+    post:
+      tags: [Autenticacion]
+      summary: Verificar codigo OTP
+      description: |
+        Verifica un codigo OTP previamente enviado.
+
+        Requiere: Ninguno (publico)
+        Uso: Confirmar identidad del usuario
+
+        Aplica rate limiting.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  description: Codigo OTP de 6 digitos
+      responses:
+        '200':
+          description: OTP verificado correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  verified:
+                    type: boolean
+        '400':
+          description: Codigo invalido o expirado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '429':
+          description: Demasiados intentos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/request-password-reset:
+    post:
+      tags: [Autenticacion]
+      summary: Solicitar recuperacion de contrasena
+      description: |
+        Inicia el proceso de recuperacion de contrasena enviando un email con instrucciones.
+
+        Requiere: Ninguno (publico)
+        Uso: Usuario que olvido su contrasena
+
+        Aplica rate limiting.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Email de recuperacion enviado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Email no encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '429':
+          description: Demasiados intentos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/reset-password:
+    post:
+      tags: [Autenticacion]
+      summary: Restablecer contrasena
+      description: |
+        Establece una nueva contrasena usando el token recibido por email.
+
+        Requiere: Token de recuperacion valido
+        Uso: Paso final del flujo de recuperacion de contrasena
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token:
+                  type: string
+                  description: Token de recuperacion recibido por email
+                newPassword:
+                  type: string
+                  minLength: 8
+                  description: "Nueva contrasena minimo 8 caracteres"
+      responses:
+        '200':
+          description: Contrasena actualizada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Token invalido o expirado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+
+  /api/auth/change-password:
+    put:
+      tags: [Autenticacion]
+      summary: Cambiar contrasena
+      description: |
+        Cambia la contrasena del usuario autenticado.
+
+        Requiere: Token de acceso valido
+        Acceso: Cualquier usuario autenticado
+
+        Requiere la contrasena actual para verificar identidad.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                  description: Contrasena actual
+                newPassword:
+                  type: string
+                  minLength: 8
+                  description: "Nueva contrasena minimo 8 caracteres"
+      responses:
+        '200':
+          description: Contrasena cambiada correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Contrasena actual incorrecta
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                properties:
+                  error:
+                    type: string
+        '401':
+          description: No autenticado
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error, code]
+                properties:
+                  error:
+                    type: string
+                  code:
+                    type: string

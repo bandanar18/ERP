@@ -1,0 +1,15 @@
+packages:
+  - "apps/*"
+allowBuilds:
+  '@prisma/engines': false
+  '@scarf/scarf': false
+  '@swc/core': true
+  bcrypt: true
+  canvas: true
+  core-js: false
+  dtrace-provider: true
+  esbuild: false
+  msw: true
+  prisma: false
+  puppeteer: false
+  unrs-resolver: true

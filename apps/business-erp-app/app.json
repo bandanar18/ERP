@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Business ERP",
+    "slug": "business-erp-app-movil",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "businesserp",
+    "description": "App móvil del Business ERP — proyecto, gestión de calidad y más módulos del sistema.",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.businesserp.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0d0d",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0d0d0d",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 220
+        }
+      ],
+      "expo-secure-store",
+      "expo-sharing"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c0019c1f-ab29-46fe-ac02-90a988837e44"
+      }
+    }
+  }
+}

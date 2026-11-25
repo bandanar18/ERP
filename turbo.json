@@ -1,0 +1,73 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalEnv": [
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "JWT_REFRESH_SECRET",
+    "ACCESS_TOKEN_EXPIRY",
+    "REFRESH_TOKEN_EXPIRY",
+    "REDIS_URL",
+    "EMAIL_HOST",
+    "EMAIL_PORT",
+    "EMAIL_USER",
+    "EMAIL_PASS",
+    "EMAIL_FROM",
+    "APP_NAME",
+    "FRONTEND_URL",
+    "PORT",
+    "NODE_ENV",
+    "VITE_API_URL",
+    "VITE_PROJECT_MANAGEMENT_API_BASE",
+    "VITE_QUALITY_CONTROL_API_BASE",
+    "PM_JWT_SECRET",
+    "PM_JWT_EXPIRES_IN",
+    "QC_JWT_SECRET",
+    "QC_JWT_EXPIRES_IN",
+    "PUPPETEER_EXECUTABLE_PATH",
+    "EXPO_PUBLIC_API_URL"
+  ],
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"]
+    },
+    "production": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"],
+      "inputs": ["src/**/*.tsx", "src/**/*.ts", "tsconfig.json"]
+    },
+    "prisma:generate": {
+      "outputs": ["node_modules/.prisma/**"],
+      "inputs": ["prisma/**"]
+    },
+    "prisma:migrate": {
+      "cache": false,
+      "inputs": ["prisma/migrations/**"]
+    },
+    "prisma:push": {
+      "cache": false,
+      "inputs": ["prisma/**"]
+    },
+    "prisma:seed": {
+      "cache": false,
+      "inputs": ["prisma/seed/**"]
+    },
+    "db:generate": {
+      "outputs": ["node_modules/.prisma/**"],
+      "inputs": ["prisma/**"]
+    },
+    "db:migrate": {
+      "cache": false,
+      "inputs": ["prisma/migrations/**"]
+    },
+    "db:push": {
+      "cache": false,
+      "inputs": ["prisma/**"]
+    }
+  }
+}

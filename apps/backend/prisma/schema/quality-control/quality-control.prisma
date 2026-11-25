@@ -1,0 +1,374 @@
+// ============================================================
+// Módulo: Quality Control (qc_*)
+// Gestión de Calidad — indicadores, mediciones, procesos y auditoría
+// Auth propia e independiente (qc_users + qc_roles + RBAC)
+// ============================================================
+
+// ---------- Enums ----------
+
+enum QcTrafficLight {
+  GREEN
+  RED
+  GRAY
+}
+
+enum QcFrequencyType {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  PROJECT_BASED
+}
+
+enum QcTargetDirection {
+  AT_LEAST
+  AT_MOST
+  RANGE
+}
+
+enum QcMeasurementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  LOCKED
+}
+
+enum QcUserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum QcMeasurementInputMode {
+  DIRECT_VALUE
+  FORMULA_INPUTS
+}
+
+enum QcAggregationMethod {
+  LAST_VALUE
+  SUM
+  AVERAGE
+  WEIGHTED_AVERAGE
+  CUMULATIVE_RATIO
+}
+
+enum QcPeriodStatus {
+  OPEN
+  CLOSED
+}
+
+// ---------- Auth del módulo ----------
+
+model QcUser {
+  id                   String                 @id @default(uuid())
+  email                String                 @unique
+  username             String?                @unique
+  password             String
+  firstName            String?
+  lastName             String?
+  externalId           String?                @unique
+  organizationId       String
+  status               QcUserStatus           @default(ACTIVE)
+  emailVerified        Boolean                @default(false)
+  otpExpiresAt         DateTime?
+  otpAttempts          Int                    @default(0)
+  lastOtpSentAt        DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  deletedAt            DateTime?
+
+  organization         QcOrganization         @relation(fields: [organizationId], references: [id])
+  qc_user_roles        QcUserRole[]
+  qc_otp_tokens        QcOtpToken[]
+  qc_password_resets   QcPasswordResetToken[]
+  processAssignments   QcUserProcessAssignment[]
+  qc_measurements      QcMeasurement[]        @relation("SubmittedBy")
+  qc_reviewed_measurements QcMeasurement[]    @relation("ReviewedBy")
+  qc_action_plans      QcActionPlan[]
+  qc_audit_logs        QcAuditLog[]
+
+  @@map("qc_users")
+}
+
+model QcRole {
+  id                    String                @id @default(uuid())
+  code                  String                @unique
+  description           String?
+  qc_user_roles         QcUserRole[]
+  qc_role_permissions   QcRolePermission[]
+  deletedAt             DateTime?
+
+  @@map("qc_roles")
+}
+
+model QcPermission {
+  id                    String                @id @default(uuid())
+  code                  String                @unique
+  description           String?
+  qc_role_permissions   QcRolePermission[]
+  deletedAt             DateTime?
+
+  @@map("qc_permissions")
+}
+
+model QcUserRole {
+  userId                String
+  roleId                String
+  user                  QcUser                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role                  QcRole                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("qc_user_roles")
+}
+
+model QcRolePermission {
+  roleId                String
+  permissionId          String
+  role                  QcRole                @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission            QcPermission          @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("qc_role_permissions")
+}
+
+model QcOtpToken {
+  id                    String                @id @default(uuid())
+  email                 String
+  userId                String?
+  code                  String
+  expiresAt             DateTime
+  verified              Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  user                  QcUser?               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("qc_otp_tokens")
+}
+
+model QcPasswordResetToken {
+  id                    String                @id @default(uuid())
+  token                 String                @unique
+  userId                String
+  expiresAt             DateTime
+  used                  Boolean               @default(false)
+  createdAt             DateTime              @default(now())
+  user                  QcUser                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("qc_password_reset_tokens")
+}
+
+// ---------- Organización y procesos ----------
+
+model QcOrganization {
+  id                    String                @id @default(uuid())
+  code                  String                @unique
+  name                  String
+  isActive              Boolean               @default(true)
+  qc_processes          QcProcess[]
+  qc_users              QcUser[]
+  qc_indicators         QcIndicator[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+
+  @@map("qc_organizations")
+}
+
+model QcProcess {
+  id                    String                @id @default(uuid())
+  organizationId        String
+  code                  String
+  name                  String
+  parentId              String?
+  organization          QcOrganization        @relation(fields: [organizationId], references: [id])
+  parent                QcProcess?            @relation("ProcessHierarchy", fields: [parentId], references: [id])
+  children              QcProcess[]           @relation("ProcessHierarchy")
+  qc_projects           QcProject[]
+  qc_indicators         QcIndicator[]
+  assignments           QcUserProcessAssignment[]
+  subprocessAssignments QcUserProcessAssignment[] @relation("SubprocessAssignment")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+
+  @@index([organizationId, parentId])
+  @@map("qc_processes")
+}
+
+model QcProject {
+  id                    String                @id @default(uuid())
+  processId             String
+  code                  String
+  name                  String
+  status                String                @default("ACTIVE")
+  process               QcProcess             @relation(fields: [processId], references: [id])
+  assignments           QcUserProcessAssignment[]
+  qc_indicators         QcIndicator[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@map("qc_projects")
+}
+
+model QcUserProcessAssignment {
+  id                    String                @id @default(uuid())
+  userId                String
+  processId             String
+  subprocessId          String?
+  projectId             String?
+  user                  QcUser                @relation(fields: [userId], references: [id])
+  process               QcProcess             @relation(fields: [processId], references: [id])
+  subprocess            QcProcess?            @relation("SubprocessAssignment", fields: [subprocessId], references: [id])
+  project               QcProject?            @relation(fields: [projectId], references: [id])
+
+  @@index([userId, processId, subprocessId, projectId])
+  @@map("qc_user_process_assignments")
+}
+
+// ---------- Indicadores ----------
+
+model QcIndicator {
+  id                    String                @id @default(uuid())
+  organizationId        String
+  processId             String
+  subprocessId          String?
+  projectId             String?
+  code                  String
+  name                  String
+  activeVersionId       String?
+  chartType             String                @default("LINE")
+  organization          QcOrganization        @relation(fields: [organizationId], references: [id])
+  process               QcProcess             @relation(fields: [processId], references: [id])
+  project               QcProject?            @relation(fields: [projectId], references: [id])
+  versions              QcIndicatorVersion[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([organizationId, processId, subprocessId, projectId])
+  @@map("qc_indicators")
+}
+
+model QcIndicatorVersion {
+  id                    String                @id @default(uuid())
+  indicatorId           String
+  frequency             QcFrequencyType
+  direction             QcTargetDirection
+  formula               String?
+  inputMode             QcMeasurementInputMode @default(DIRECT_VALUE)
+  displayAsPercent      Boolean               @default(false)
+  aggregation           QcAggregationMethod   @default(LAST_VALUE)
+  effectiveFrom         DateTime
+  effectiveTo           DateTime?
+  indicator             QcIndicator           @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+  targets               QcIndicatorTarget[]
+  measurements          QcMeasurement[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([indicatorId])
+  @@map("qc_indicator_versions")
+}
+
+model QcIndicatorTarget {
+  id                    String                @id @default(uuid())
+  versionId             String
+  targetValue           Float
+  unit                  String
+  thresholds            Json
+  version               QcIndicatorVersion    @relation(fields: [versionId], references: [id], onDelete: Cascade)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([versionId])
+  @@map("qc_indicator_targets")
+}
+
+// ---------- Mediciones ----------
+
+model QcReportingPeriod {
+  id                    String                @id @default(uuid())
+  startsAt              DateTime
+  endsAt                DateTime
+  dueDate               DateTime
+  status                QcPeriodStatus        @default(OPEN)
+  measurements          QcMeasurement[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+
+  @@map("qc_reporting_periods")
+}
+
+model QcMeasurement {
+  id                    String                @id @default(uuid())
+  indicatorVersionId    String
+  periodId              String
+  value                 Float?
+  status                QcMeasurementStatus   @default(DRAFT)
+  trafficLight          QcTrafficLight?
+  submittedById         String
+  reviewedById          String?
+  reviewedAt            DateTime?
+  observation           String?
+  analysisInternal      String?
+  analysisExternal      String?
+  version               QcIndicatorVersion    @relation(fields: [indicatorVersionId], references: [id])
+  period                QcReportingPeriod     @relation(fields: [periodId], references: [id])
+  submittedBy           QcUser                @relation("SubmittedBy", fields: [submittedById], references: [id])
+  reviewedBy            QcUser?               @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  inputs                QcMeasurementInput[]
+  actionPlans           QcActionPlan[]
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@unique([indicatorVersionId, periodId], name: "uq_qc_measurement_indicator_period")
+  @@index([periodId])
+  @@map("qc_measurements")
+}
+
+model QcMeasurementInput {
+  id                    String                @id @default(uuid())
+  measurementId         String
+  key                   String
+  value                 Float
+  measurement           QcMeasurement         @relation(fields: [measurementId], references: [id], onDelete: Cascade)
+  deletedAt             DateTime?
+
+  @@index([measurementId])
+  @@map("qc_measurement_inputs")
+}
+
+model QcActionPlan {
+  id                    String                @id @default(uuid())
+  measurementId         String
+  action                String
+  dates                 String
+  progress              Float
+  ownerId               String
+  measurement           QcMeasurement         @relation(fields: [measurementId], references: [id], onDelete: Cascade)
+  owner                 QcUser                @relation(fields: [ownerId], references: [id])
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([measurementId])
+  @@map("qc_action_plans")
+}
+
+// ---------- Auditoría ----------
+
+model QcAuditLog {
+  id                    String                @id @default(uuid())
+  actorId               String
+  action                String
+  entityType            String
+  entityId              String
+  before                Json?
+  after                 Json?
+  ip                    String?
+  route                 String?
+  createdAt             DateTime              @default(now())
+  actor                 QcUser                @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("qc_audit_logs")
+}

@@ -1,0 +1,269 @@
+model PmRole {
+  id                  String                @id @default(uuid())
+  code                String                @unique
+  description         String?
+  pm_role_permissions PmRolePermission[]
+  pm_user_roles       PmUserRole[]
+
+  @@map("pm_roles")
+}
+
+model PmModuleUser {
+  id                  String                    @id @default(uuid())
+  email               String                    @unique
+  username            String?                   @unique
+  password            String
+  firstName           String?
+  lastName            String?
+  phone               String?
+  externalId          String?                   @unique
+  status              String                    @default("ACTIVE")
+  emailVerified       Boolean                   @default(false)
+  otpExpiresAt        DateTime?
+  otpAttempts         Int                       @default(0)
+  lastOtpSentAt       DateTime?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  pm_audit_log        PmAuditLog[]
+  pm_projects         PmProject[]
+  pm_user_roles       PmUserRole[]
+  scopes              PmUserScope[]
+  pm_otp_tokens       PmOtpToken[]
+  pm_password_resets  PmPasswordResetToken[]
+
+  @@map("pm_users")
+}
+
+model PmOtpToken {
+  id        String        @id @default(uuid())
+  email     String
+  userId    String?
+  code      String
+  expiresAt DateTime
+  verified  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  user      PmModuleUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pm_otp_tokens")
+}
+
+model PmPasswordResetToken {
+  id        String        @id @default(uuid())
+  token     String        @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  user      PmModuleUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pm_password_reset_tokens")
+}
+
+model PmUserScope {
+  id        String       @id @default(uuid())
+  userId    String
+  companyId String?
+  projectId String?
+  user      PmModuleUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("pm_user_scopes")
+}
+
+model PmCompany {
+  id          String      @id @default(uuid())
+  name        String
+  taxId       String?
+  legalName   String?
+  address     String?
+  phone       String?
+  email       String?
+  logoUrl     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  pm_projects PmProject[]
+  users       ErpUser[]
+
+  @@map("pm_companies")
+}
+
+model PmProject {
+  id                      String                 @id @default(uuid())
+  code                    String                 @unique
+  fullName                String
+  shortName               String?
+  description             String?
+  managerId               String?
+  companyId               String
+  startDate               DateTime?
+  endDate                 DateTime?
+  status                  PmProjectStatus        @default(IN_PROGRESS)
+  offeredAmount           Decimal                @default(0)
+  estimatedCost           Decimal                @default(0)
+  actualPhysicalProgress  String?
+  plannedPhysicalProgress String?
+  advanceAmount           Decimal                @default(0) @db.Decimal(14, 2)
+  amortizedAmount         Decimal                @default(0) @db.Decimal(14, 2)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  pm_cost_plannings       PmCostPlanning[]
+  pm_financial_valuations PmFinancialValuation[]
+  pm_physical_progress    PmPhysicalProgress[]
+  pm_obligations          PmProjectObligation[]
+  pm_expenses             PmProjectExpense[]
+  pm_collections          PmProjectCollection[]
+  pm_companies            PmCompany              @relation(fields: [companyId], references: [id])
+  pm_users                PmModuleUser?          @relation(fields: [managerId], references: [id])
+
+  @@map("pm_projects")
+}
+
+model PmPhysicalProgress {
+  id              String    @id @default(uuid())
+  projectId       String
+  date            DateTime  @default(now())
+  actualProgress  String?
+  plannedProgress String?
+  attentionPoints String?
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  pm_projects     PmProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("pm_physical_progress")
+}
+
+model PmFinancialValuation {
+  id              String            @id @default(uuid())
+  projectId       String
+  valuationNumber String
+  amountUsd       Decimal
+  startDate       DateTime
+  endDate         DateTime
+  status          PmValuationStatus @default(POR_VALUAR)
+  invoiceNumber   String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  pm_projects     PmProject         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  collections     PmProjectCollection[]
+
+  @@index([projectId])
+  @@map("pm_financial_valuations")
+}
+
+model PmCostPlanning {
+  id          String    @id @default(uuid())
+  projectId   String
+  amountUsd   Decimal
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  pm_projects PmProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("pm_cost_plannings")
+}
+
+model PmGalleryFile {
+  id           String   @id @default(uuid())
+  fileName     String
+  originalName String
+  mimeType     String
+  size         BigInt
+  path         String
+  uploadDate   DateTime @default(now())
+  module       String   @default("PROJECT_MANAGEMENT")
+  entityType   String
+  entityId     String
+  description  String?
+  category     String?
+
+  @@index([module, entityType, entityId])
+  @@map("pm_gallery_files")
+}
+
+enum PmObligationStatus {
+  PENDIENTE
+  PARCIAL
+  PAGADO
+}
+
+model PmProjectObligation {
+  id              String               @id @default(uuid())
+  projectId       String
+  category        String
+  description     String
+  supplier        String?
+  invoiceNumber   String?
+  amountUsd       Decimal              @db.Decimal(14, 2)
+  dueDate         DateTime?
+  status          PmObligationStatus   @default(PENDIENTE)
+  isIncurred      Boolean              @default(true)
+  incurredAt      DateTime?            @default(now())
+  supportDocument String?
+  paidAt          DateTime?
+  createdById     String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  pm_projects     PmProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  payments        PmObligationPayment[]
+
+  @@index([projectId, status])
+  @@index([projectId, isIncurred])
+  @@map("pm_project_obligations")
+}
+
+model PmObligationPayment {
+  id           String              @id @default(uuid())
+  obligationId String
+  amountUsd    Decimal             @db.Decimal(14, 2)
+  paidAt       DateTime            @default(now())
+  paidById     String?
+  note         String?
+  createdAt    DateTime            @default(now())
+  obligation   PmProjectObligation @relation(fields: [obligationId], references: [id], onDelete: Cascade)
+  expense      PmProjectExpense?
+
+  @@index([obligationId])
+  @@map("pm_obligation_payments")
+}
+
+model PmProjectExpense {
+  id                  String               @id @default(uuid())
+  projectId           String
+  description         String
+  amountUsd           Decimal              @db.Decimal(14, 2)
+  expenseDate         DateTime             @default(now())
+  createdById         String?
+  obligationPaymentId String?              @unique
+  obligationPayment   PmObligationPayment? @relation(fields: [obligationPaymentId], references: [id], onDelete: Cascade)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  pm_projects         PmProject            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("pm_project_expenses")
+}
+
+model PmProjectCollection {
+  id                 String                @id @default(uuid())
+  projectId          String
+  valuationId        String?
+  reference          String?
+  grossAmountUsd     Decimal?              @db.Decimal(14, 2)
+  amortizedAmountUsd Decimal?              @default(0) @db.Decimal(14, 2)
+  amountUsd          Decimal               @db.Decimal(14, 2)
+  collectedAt        DateTime              @default(now())
+  createdById        String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  pm_projects        PmProject             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  valuation          PmFinancialValuation? @relation(fields: [valuationId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([valuationId])
+  @@map("pm_project_collections")
+}

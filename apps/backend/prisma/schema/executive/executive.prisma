@@ -1,0 +1,352 @@
+// ============================================================
+// MÓDULO EJECUTIVO — Sistema de Seguimiento de Indicadores
+// ------------------------------------------------------------
+// Fusionado desde el proyecto "Resumen Ejecutivo" (NestJS) como
+// módulo nativo del ERP. Módulo INDEPENDIENTE: modelos con
+// prefijo Executive y tablas @@map("executive_*") en el mismo
+// schema public del ERP (aditivo, sin colisiones).
+// Roles/auth propios del módulo, sin relación con los del ERP.
+// ============================================================
+
+// ─── Enums ───────────────────────────────────────────────────
+
+enum ExecutiveTrafficLight {
+  GREEN
+  RED
+  GRAY
+}
+
+enum ExecutiveFrequencyType {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  PROJECT_BASED
+}
+
+enum ExecutiveTargetDirection {
+  AT_LEAST
+  AT_MOST
+  RANGE
+}
+
+enum ExecutiveMeasurementStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  LOCKED
+}
+
+enum ExecutiveUserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ExecutiveMeasurementInputMode {
+  DIRECT_VALUE
+  FORMULA_INPUTS
+}
+
+enum ExecutiveAggregationMethod {
+  LAST_VALUE
+  SUM
+  AVERAGE
+  WEIGHTED_AVERAGE
+  CUMULATIVE_RATIO
+}
+
+// ─── Organización ────────────────────────────────────────────
+
+model ExecutiveOrganization {
+  id         String                  @id @default(uuid())
+  code       String                  @unique
+  name       String
+  isActive   Boolean                 @default(true)
+  processes  ExecutiveProcess[]
+  users      ExecutiveUser[]
+  indicators ExecutiveIndicator[]
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  deletedAt  DateTime?
+
+  @@map("executive_organization")
+}
+
+// ─── Procesos / Proyectos / Asignaciones ─────────────────────
+
+model ExecutiveProcess {
+  id             String                  @id @default(uuid())
+  organizationId String
+  code           String
+  name           String
+  parentId       String?
+
+  organization ExecutiveOrganization @relation(fields: [organizationId], references: [id])
+  parent       ExecutiveProcess?     @relation("ExecutiveProcessHierarchy", fields: [parentId], references: [id])
+  children     ExecutiveProcess[]    @relation("ExecutiveProcessHierarchy")
+  projects     ExecutiveProject[]
+  indicators   ExecutiveIndicator[]
+
+  assignments           ExecutiveUserProcessAssignment[]
+  subprocessAssignments ExecutiveUserProcessAssignment[] @relation("ExecutiveSubprocessAssignment")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@map("executive_process")
+}
+
+model ExecutiveProject {
+  id        String                  @id @default(uuid())
+  processId String
+  code      String
+  name      String
+  status    String                  @default("ACTIVE")
+
+  process     ExecutiveProcess                 @relation(fields: [processId], references: [id])
+  assignments ExecutiveUserProcessAssignment[]
+  indicators  ExecutiveIndicator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("executive_project")
+}
+
+model ExecutiveUserProcessAssignment {
+  id           String             @id @default(uuid())
+  userId       String
+  processId    String
+  subprocessId String?
+  projectId    String?
+
+  user       ExecutiveUser     @relation(fields: [userId], references: [id])
+  process    ExecutiveProcess  @relation(fields: [processId], references: [id])
+  subprocess ExecutiveProcess? @relation("ExecutiveSubprocessAssignment", fields: [subprocessId], references: [id])
+  project    ExecutiveProject? @relation(fields: [projectId], references: [id])
+
+  @@index([userId, processId, subprocessId, projectId])
+  @@map("executive_user_process_assignment")
+}
+
+// ─── Indicadores ─────────────────────────────────────────────
+
+model ExecutiveIndicator {
+  id              String                    @id @default(uuid())
+  organizationId  String
+  processId       String
+  subprocessId    String?
+  projectId       String?
+  code            String
+  name            String
+  activeVersionId String?
+  chartType       String                    @default("LINE")
+
+  organization ExecutiveOrganization @relation(fields: [organizationId], references: [id])
+  process      ExecutiveProcess      @relation(fields: [processId], references: [id])
+  project      ExecutiveProject?     @relation(fields: [projectId], references: [id])
+  versions     ExecutiveIndicatorVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, processId, subprocessId, projectId])
+  @@map("executive_indicator")
+}
+
+model ExecutiveIndicatorVersion {
+  id                String                        @id @default(uuid())
+  indicatorId       String
+  frequency         ExecutiveFrequencyType
+  direction         ExecutiveTargetDirection
+  formula           String?
+  inputMode         ExecutiveMeasurementInputMode @default(DIRECT_VALUE)
+  displayAsPercent  Boolean                       @default(false)
+  aggregation       ExecutiveAggregationMethod    @default(LAST_VALUE)
+  effectiveFrom     DateTime
+  effectiveTo       DateTime?
+
+  indicator    ExecutiveIndicator         @relation(fields: [indicatorId], references: [id])
+  targets      ExecutiveIndicatorTarget[]
+  measurements ExecutiveMeasurement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("executive_indicator_version")
+}
+
+model ExecutiveIndicatorTarget {
+  id          String                    @id @default(uuid())
+  versionId   String
+  targetValue Float
+  unit        String
+  thresholds  Json // e.g. { "green": 1, "yellow": 0.95, "orange": 0.8, "red": 0 }
+
+  version ExecutiveIndicatorVersion @relation(fields: [versionId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("executive_indicator_target")
+}
+
+// ─── Mediciones ──────────────────────────────────────────────
+
+model ExecutiveReportingPeriod {
+  id       String   @id @default(uuid())
+  startsAt DateTime
+  endsAt   DateTime
+  dueDate  DateTime
+  status   String   @default("OPEN") // OPEN, CLOSED
+
+  measurements ExecutiveMeasurement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@map("executive_reporting_period")
+}
+
+model ExecutiveMeasurement {
+  id                 String                      @id @default(uuid())
+  indicatorVersionId String
+  periodId           String
+  value              Float?
+  status             ExecutiveMeasurementStatus  @default(DRAFT)
+  trafficLight       ExecutiveTrafficLight?      // GREEN, RED, GRAY
+  submittedById      String
+  reviewedById       String?
+  reviewedAt         DateTime?
+  observation        String?
+  analysisInternal   String?
+  analysisExternal   String?
+
+  version     ExecutiveIndicatorVersion  @relation(fields: [indicatorVersionId], references: [id])
+  period      ExecutiveReportingPeriod   @relation(fields: [periodId], references: [id])
+  submittedBy ExecutiveUser              @relation("ExecutiveSubmittedBy", fields: [submittedById], references: [id])
+  reviewedBy  ExecutiveUser?             @relation("ExecutiveReviewedBy", fields: [reviewedById], references: [id])
+  inputs      ExecutiveMeasurementInput[]
+  actionPlans ExecutiveActionPlan[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([indicatorVersionId, periodId], name: "uq_executive_measurement_indicator_period")
+  @@map("executive_measurement")
+}
+
+model ExecutiveMeasurementInput {
+  id            String              @id @default(uuid())
+  measurementId String
+  key           String
+  value         Float
+
+  measurement ExecutiveMeasurement @relation(fields: [measurementId], references: [id])
+  deletedAt   DateTime?
+
+  @@map("executive_measurement_input")
+}
+
+model ExecutiveActionPlan {
+  id            String              @id @default(uuid())
+  measurementId String
+  action        String
+  dates         String
+  progress      Float
+  ownerId       String
+
+  measurement ExecutiveMeasurement @relation(fields: [measurementId], references: [id])
+  owner       ExecutiveUser        @relation(fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("executive_action_plan")
+}
+
+// ─── Usuarios / Roles / Permisos del módulo ──────────────────
+
+model ExecutiveUser {
+  id                   String                        @id @default(uuid())
+  email                String                        @unique
+  password             String?
+  status               ExecutiveUserStatus           @default(ACTIVE)
+  externalId           String?                       @unique
+  organizationId       String
+  organization         ExecutiveOrganization         @relation(fields: [organizationId], references: [id])
+  roles                ExecutiveUserRole[]
+  processAssignments   ExecutiveUserProcessAssignment[]
+  measurements         ExecutiveMeasurement[]        @relation("ExecutiveSubmittedBy")
+  reviewedMeasurements ExecutiveMeasurement[]        @relation("ExecutiveReviewedBy")
+  actionPlans          ExecutiveActionPlan[]
+  auditLogs            ExecutiveAuditLog[]
+  createdAt            DateTime                      @default(now())
+  updatedAt            DateTime                      @updatedAt
+  deletedAt            DateTime?
+
+  @@map("executive_user")
+}
+
+model ExecutiveRole {
+  id          String                   @id @default(uuid())
+  code        String                   @unique
+  description String?
+  users       ExecutiveUserRole[]
+  permissions ExecutiveRolePermission[]
+  deletedAt   DateTime?
+
+  @@map("executive_role")
+}
+
+model ExecutivePermission {
+  id          String                   @id @default(uuid())
+  code        String                   @unique
+  description String?
+  roles       ExecutiveRolePermission[]
+  deletedAt   DateTime?
+
+  @@map("executive_permission")
+}
+
+model ExecutiveUserRole {
+  userId String
+  roleId String
+  user   ExecutiveUser @relation(fields: [userId], references: [id])
+  role   ExecutiveRole @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("executive_user_role")
+}
+
+model ExecutiveRolePermission {
+  roleId       String
+  permissionId String
+  role         ExecutiveRole       @relation(fields: [roleId], references: [id])
+  permission   ExecutivePermission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("executive_role_permission")
+}
+
+// ─── Auditoría ───────────────────────────────────────────────
+
+model ExecutiveAuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor ExecutiveUser @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId, createdAt(sort: Desc)])
+  @@map("executive_audit_log")
+}

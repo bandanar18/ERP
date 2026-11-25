@@ -1,0 +1,30 @@
+openapi: 3.0.0
+info:
+  title: Business ERP API
+  version: 1.0.0
+  description: API REST para el sistema de gestión empresarial Business ERP
+  contact:
+    name: Business ERP Team
+    email: support@businesserp.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3001
+    description: Servidor de desarrollo
+  - url: https://api.businesserp.com
+    description: Servidor de producción
+
+tags:
+  - name: Empresas
+    description: Operaciones de gestión de empresas
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths: {}
